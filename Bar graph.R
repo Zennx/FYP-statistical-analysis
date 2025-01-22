@@ -2,16 +2,17 @@
 #Enter file location
 FileLocation <- "~/Library/CloudStorage/OneDrive-InternationalMedicalUniversity/Research Data - Mutant rice.xlsx"
 #Enter sheet name
-SheetName <- "Set 2"
+SheetName <- "JxComb"
 #Enter variable name
-VariableName <- "Tproline"
+VariableName <- "Tprotein"
+#other variables to check in this experiment: Tprotein, POX, CT, Ca, Cb, Cab
 #Plot labbeling
-TitleName <- "Proline content in mutant rice lines under control and stress conditions"
+TitleName <- "Total chlorophyll content (mg/g FW) in different rice lines under control and stress conditions"
 xaxis <- "Mutant rice lines"
-yaxis <- "Proline content (mg/g)"
+yaxis <- "Total chlorophyll content (mg/g FW)"
 #Define y-axis limit for sig. labels, [yes/no]
 #ylim <- "yes"
-ylimit <- 0.5
+ylimit <- 2.6
 
 #You are free to run the code from here!
 
@@ -32,13 +33,20 @@ Dataset$Condition <- factor(Dataset$Condition,
 
 summary.data.frame(Dataset)
 
+proline <- tibble(Line = Dataset$Line,
+                  Condition = Dataset$Condition,
+                  Tproline = Dataset$Tprotein) #Enter variable name here, dont forget!
+#Remove NA slots
+#SvsNS <- proline[apply(proline, 1, function(x) all(is.finite(x))), ]
+proline <-filter_if(proline, is.numeric, all_vars((.) != 0))
+
 #summarises mean and sd of proline content
-Group_proline <- Dataset %>%
+Group_proline <- proline %>%
   group_by(Condition, Line) %>%
   summarise(proline_mean = mean(Tproline), proline_sd = sd(Tproline))
 
 #ANOVA analysis p-value for control and stress condition
-anova_result <- aov(Proline ~ Condition * Line, data = Dataset)
+anova_result <- aov(Tproline ~ Condition * Line, data = proline)
 summary(anova_result)
 
 # Post-hoc test using Tukey's HSD
@@ -48,7 +56,12 @@ plot(tukey_result) +
   with (par(mar=c(1,8,0,1) + 3.5),{plot(TukeyHSD(anova_result), las=1, cex.axis = 0.7, cex.lab = 1, cex.main = 2)})
 
 # Plotting the bar graph
-plot <- ggplot(Group_proline, aes(fill=Condition, y=proline_mean, x=Line), y=y, group = group) + 
+plot <- ggplot(Group_proline, 
+               aes(fill=Condition, 
+                   y=proline_mean, 
+                   x=factor(Line, level=c('MR220CL2', 'NMR152', 'ML82-2'))),
+               y=y, 
+               group = group) + 
   geom_bar(position="dodge", stat="identity") +
   expand_limits(y = ylimit) +
   geom_errorbar( aes(x=Line, ymin=proline_mean-proline_sd, ymax=proline_mean+proline_sd), 
